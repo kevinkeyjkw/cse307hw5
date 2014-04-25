@@ -144,6 +144,37 @@ def anlz_procs_imp(node):
         proc_called.add(node.name)
     else: raise Exception("Not implemented.")
 
+def anlz_procs_fun(node, local_var_env, is_global): 
+	"""Analyze procedure definitions and calls."""
+	#g=lambda x,y:x+y
+	if isinstance(node,(Print,Assign)):pass
+	elif isinstance(node,Block):
+		anlz_block_procs(node)
+	elif isinstance(node,(If,While)):
+		anlz_if_while_procs(node)
+	elif isinstance(node,Def):
+		anlz_def_procs(node)
+	elif isinstance(node,Call):
+		anlz_call_procs(node)
+	else: raise Exception("Not implemented.")
+	
+def anlz_block_procs(node):
+	for s in node.stmts: anlz_procs_fun(s)
+
+def anlz_if_while_procs(node):
+	anlz_procs_fun(node.stmt)
+
+def anlz_def_procs(node):
+	if node.name in proc_defined: raise AnalError()
+	print('Definition of procedure',node.name)
+	proc_defined.add(node.name)
+	anlz_procs_fun(node.body)
+
+def anlz_call_procs(node):
+	print('Call of procedure',node.name)
+	proc_called.add(node.name)
+
+def anlz_procs_obj(node, local_var_env, is_global): pass
 
 def anlz_vars_imp(node, local_var_env, is_global):
     """Analyze variable definitions and uses."""
@@ -189,11 +220,8 @@ def anlz_vars_imp(node, local_var_env, is_global):
         for a in node.args: anlz_vars_imp(a, local_var_env, is_global)
     else: raise Exception("Not implemented.")
 
-def anlz_procs_fun(node, local_var_env, is_global): pass
 
 def anlz_vars_fun(node, local_var_env, is_global): pass
-
-def anlz_procs_obj(node, local_var_env, is_global): pass
 
 def anlz_vars_obj(node, local_var_env, is_global): pass
 # Below is the driver code, which parses a given MustScript program

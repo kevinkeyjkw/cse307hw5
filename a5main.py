@@ -1,5 +1,6 @@
 import sys
 import tpg
+import pdb
 
 class AnalError(Exception):
     """Class of exceptions raised when an error occurs during analysis."""
@@ -144,37 +145,47 @@ def anlz_procs_imp(node):
         proc_called.add(node.name)
     else: raise Exception("Not implemented.")
 
-def anlz_procs_fun(node, local_var_env, is_global): 
+def anlz_procs_fun(node): 
 	"""Analyze procedure definitions and calls."""
 	#g=lambda x,y:x+y
+	#pdb.set_trace()
 	if isinstance(node,(Print,Assign)):pass
 	elif isinstance(node,Block):
-		anlz_block_procs(node)
+		anlz_block_procs_fun(node,anlz_procs_fun(node.stmts[0]),1)
 	elif isinstance(node,(If,While)):
-		anlz_if_while_procs(node)
+		anlz_if_while_procs_fun(node)
 	elif isinstance(node,Def):
-		anlz_def_procs(node)
+		anlz_def_procs_fun(node)
 	elif isinstance(node,Call):
-		anlz_call_procs(node)
-	else: raise Exception("Not implemented.")
+		anlz_call_procs_fun(node)
+	else: print("Not implemented.")
+	#Move everything to functions, is this func programming
 	
-def anlz_block_procs(node):
-	for s in node.stmts: anlz_procs_fun(s)
+def anlz_block_procs_fun(node,fn,x):
+	if x == len(node.stmts):
+		return
+	else:
+		return anlz_block_procs_fun(node,anlz_procs_fun(node.stmts[x]),x+1)
 
-def anlz_if_while_procs(node):
+def anlz_if_while_procs_fun(node):
 	anlz_procs_fun(node.stmt)
 
-def anlz_def_procs(node):
+def anlz_def_procs_fun(node):
 	if node.name in proc_defined: raise AnalError()
 	print('Definition of procedure',node.name)
 	proc_defined.add(node.name)
 	anlz_procs_fun(node.body)
 
-def anlz_call_procs(node):
+def anlz_call_procs_fun(node):
 	print('Call of procedure',node.name)
 	proc_called.add(node.name)
 
-def anlz_procs_obj(node, local_var_env, is_global): pass
+def anlz_procs_obj(node, local_var_env, is_global):
+	if isinstance(node,(Print,Assign)):pass
+	elif isinstance(node,Def):
+		node.anlz_proc_obj()
+	else: raise Exception("Not implemented.")
+	#Write anlz_proc_obj methods for all the classes. Is this oop?
 
 def anlz_vars_imp(node, local_var_env, is_global):
     """Analyze variable definitions and uses."""
@@ -221,7 +232,31 @@ def anlz_vars_imp(node, local_var_env, is_global):
     else: raise Exception("Not implemented.")
 
 
-def anlz_vars_fun(node, local_var_env, is_global): pass
+def anlz_vars_fun(node, local_var_env, is_global):
+	if(isinstance(node,Var)):
+		anlz_var_vars_fun(node)
+	elif isinstance(node,(Int,String)):pass
+	elif isinstance(node,Array):
+		anlz_array_vars_fun(node)
+	elif isinstance(node,Index):
+		anlz_index_vars_fun(node)
+	elif isinstance(node,BinOpExp):
+		anlz_binOpExp_vars_fun(node)
+	elif isinstance(node,UniOpExp):
+		anlz_uniOpExp_vars_fun(node)
+	elif isinstance(node,Print):
+		anlz_print_vars_fun(node)
+	elif isinstance(node,Assign):
+		anlz_assign_vars_fun(node)
+	elif isinstance(node,Block):
+		anlz_block_vars_fun(node)
+	elif isinstance(node,(If,While)):
+		anlz_if_while_vars_fun(node)
+	elif isinstance(node,Def):
+		anlz_def_vars_fun(node)
+	elif isinstance(node,Call):
+		anlz_call_vars_fun(node)
+	else:print("Not implemented.")	
 
 def anlz_vars_obj(node, local_var_env, is_global): pass
 # Below is the driver code, which parses a given MustScript program
@@ -252,23 +287,24 @@ try:
     anlz_vars_imp(node, local_var_env, is_global)
 
     # set up and call method for analyzing procedures (functional)
+    pdb.set_trace()
     proc_defined,proc_called = set(),set()
     anlz_procs_fun(node)
     if {p for p in proc_called if p not in proc_defined}:
-    	raise AnalError('call to undefined proc')
+    	print('call to undefined proc')
     global_var_env, local_var_env, is_global = set(),set(),True
-    anlz_vars_fun(node,local_var_env,is_global)
+    #anlz_vars_fun(node,local_var_env,is_global)
     # set up and call method for analyzing variables (functional)
     # your methods could be named anlz_procs_fun and anlz_vars_fun 
 	
 	
     # set up and call method for analyzing procedures (object-oriented):
-    proc_defined,proc_called = set(),set()
-    anlz_procs_obj(node)
-    if {p for p in proc_called if p not in proc_defined}:
-    	raise AnalError('call to undefined proc')
-    global_var_env, local_var_env, is_global = set(),set(),True
-    anlz_vars_obj(node,local_var_env,is_global)
+    #proc_defined,proc_called = set(),set()
+    #anlz_procs_obj(node)
+    #if {p for p in proc_called if p not in proc_defined}:
+    #	raise AnalError('call to undefined proc')
+    #global_var_env, local_var_env, is_global = set(),set(),True
+    #anlz_vars_obj(node,local_var_env,is_global)
     # set up and call method for analyzing variables (object-oriented):
     # your methods could be named anlz_procs_obj and anlz_vars_obj
 
@@ -287,4 +323,4 @@ except AnalError as e:
     # Uncomment the next line to re-raise the evaluation error, 
     # displaying where the error occurs.  Comment it for submission.
 
-    # raise
+    raise

@@ -293,7 +293,7 @@ try:
     if {p for p in proc_called if p not in proc_defined}:
     	print('call to undefined proc')
     global_var_env, local_var_env, is_global = set(),set(),True
-    #anlz_vars_fun(node,local_var_env,is_global)
+    anlz_vars_fun(node,local_var_env,is_global)
     # set up and call method for analyzing variables (functional)
     # your methods could be named anlz_procs_fun and anlz_vars_fun 
 	

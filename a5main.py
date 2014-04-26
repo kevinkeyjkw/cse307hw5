@@ -144,48 +144,63 @@ def anlz_procs_imp(node):
         print('Call of procedure', node.name)
         proc_called.add(node.name)
     else: raise Exception("Not implemented.")
-
-def anlz_procs_fun(node): 
-	"""Analyze procedure definitions and calls."""
-	#g=lambda x,y:x+y
-	#pdb.set_trace()
-	if isinstance(node,(Print,Assign)):pass
+    
+def anlz_procs_defined_fun(node,procs_defined):
+	if isinstance(node,(Print,Assign,Call)):
+		return set()
 	elif isinstance(node,Block):
-		anlz_block_procs_fun(node,anlz_procs_fun(node.stmts[0]),1)
+		return anlz_block_p_d_fun(node,procs_defined,0)
 	elif isinstance(node,(If,While)):
-		anlz_if_while_procs_fun(node)
+		return anlz_procs_defined_fun(node.stmt,procs_defined)
 	elif isinstance(node,Def):
-		anlz_def_procs_fun(node)
-	elif isinstance(node,Call):
-		anlz_call_procs_fun(node)
-	else: print("Not implemented.")
-	#Move everything to functions, is this func programming
-	
-def anlz_block_procs_fun(node,fn,x):
-	if x == len(node.stmts):
-		return
+		return anlz_DEF_procs_fun(node,procs_defined)
 	else:
-		return anlz_block_procs_fun(node,anlz_procs_fun(node.stmts[x]),x+1)
+		return set()
+		
+def anlz_block_p_d_fun(node,procs_defined,x):
+	if x == len(node.stmts):
+		return set()
+	else:
+		return anlz_procs_defined_fun(node.stmts[x],procs_defined) | anlz_block_p_d_fun(node,procs_defined,x+1)
 
-def anlz_if_while_procs_fun(node):
-	anlz_procs_fun(node.stmt)
-
-def anlz_def_procs_fun(node):
-	if node.name in proc_defined: raise AnalError()
+def anlz_DEF_procs_fun(node,procs_defined):
+	if node.name in procs_defined: raise AnalError()
 	print('Definition of procedure',node.name)
-	proc_defined.add(node.name)
-	anlz_procs_fun(node.body)
+	return {node.name} | anlz_procs_defined_fun(node.body,procs_defined)
 
-def anlz_call_procs_fun(node):
-	print('Call of procedure',node.name)
-	proc_called.add(node.name)
 
-def anlz_procs_obj(node, local_var_env, is_global):
-	if isinstance(node,(Print,Assign)):pass
-	elif isinstance(node,Def):
-		node.anlz_proc_obj()
-	else: raise Exception("Not implemented.")
-	#Write anlz_proc_obj methods for all the classes. Is this oop?
+# def anlz_procs_fun(node): 
+# 	"""Analyze procedure definitions and calls."""
+# 	#g=lambda x,y:x+y
+# 	#pdb.set_trace()
+# 	if isinstance(node,(Print,Assign)):pass
+# 	elif isinstance(node,Block):
+# 		anlz_block_procs_fun(node,anlz_procs_fun(node.stmts[0]),1)
+# 	elif isinstance(node,(If,While)):
+# 		anlz_procs_fun(node.stmt)
+# 	elif isinstance(node,Def):
+# 		anlz_def_procs_fun(node)
+# 	elif isinstance(node,Call):
+# 		anlz_call_procs_fun(node)
+# 	else: print("Not implemented.")
+# 	#Move everything to functions, is this func programming
+# 	
+# def anlz_def_procs_fun(node,procs_defined):
+# 	if node.name in proc_defined: raise AnalError()
+# 	print('Definition of procedure',node.name)
+# 	proc_defined.add(node.name)
+# 	anlz_procs_fun(node.body)
+# 	return anlz_procs_fun(node.body)
+# def anlz_call_procs_fun(node):
+# 	print('Call of procedure',node.name)
+# 	proc_called.add(node.name)
+# 
+# def anlz_procs_obj(node, local_var_env, is_global):
+# 	if isinstance(node,(Print,Assign)):pass
+# 	elif isinstance(node,Def):
+# 		node.anlz_proc_obj()
+# 	else: raise Exception("Not implemented.")
+# 	#Write anlz_proc_obj methods for all the classes. Is this oop?
 
 def anlz_vars_imp(node, local_var_env, is_global):
     """Analyze variable definitions and uses."""
@@ -287,13 +302,20 @@ try:
     anlz_vars_imp(node, local_var_env, is_global)
 
     # set up and call method for analyzing procedures (functional)
+    
     pdb.set_trace()
-    proc_defined,proc_called = set(),set()
-    anlz_procs_fun(node)
-    if {p for p in proc_called if p not in proc_defined}:
-    	print('call to undefined proc')
-    global_var_env, local_var_env, is_global = set(),set(),True
-    anlz_vars_fun(node,local_var_env,is_global)
+    procs_defined,proc_called = set(),set()
+    procs_defined = anlz_procs_defined_fun(node,procs_defined)
+    #proc_called = anlz_procs_called_fun(node,proc_called)
+    
+    
+    #anlz_procs_fun(node)
+    #if {p for p in proc_called if p not in proc_defined}:
+    #	print('call to undefined proc')
+    #global_var_env, local_var_env, is_global = set(),set(),True
+    #anlz_vars_fun(node,local_var_env,is_global)
+    
+    
     # set up and call method for analyzing variables (functional)
     # your methods could be named anlz_procs_fun and anlz_vars_fun 
 	

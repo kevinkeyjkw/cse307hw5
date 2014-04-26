@@ -168,7 +168,25 @@ def anlz_DEF_procs_fun(node,procs_defined):
 	print('Definition of procedure',node.name)
 	return {node.name} | anlz_procs_defined_fun(node.body,procs_defined)
 
+def anlz_procs_called_fun(node,procs_called):
+	if isinstance(node,Block):
+		return anlz_block_c_f(node,procs_called,0)
+	elif isinstance(node,(If,While)):
+		return anlz_procs_called_fun(node.stmt,procs_called)
+	elif isinstance(node,Def):
+		return anlz_procs_called_fun(node.body,procs_called)
+	elif isinstance(node,Call):
+		return anlz_CALL_c_f(node,procs_called)
+	else: return set()
 
+def anlz_block_c_f(node,procs_called,x):
+	if x == len(node.stmts):
+		return set()
+	else:
+		return anlz_procs_called_fun(node.stmts[x],procs_called) | anlz_block_c_f(node,procs_called,x+1)
+def anlz_CALL_c_f(node,procs_called):
+	print('Call of procedure', node.name)
+	return set([node.name])
 # def anlz_procs_fun(node): 
 # 	"""Analyze procedure definitions and calls."""
 # 	#g=lambda x,y:x+y
@@ -304,9 +322,9 @@ try:
     # set up and call method for analyzing procedures (functional)
     
     pdb.set_trace()
-    procs_defined,proc_called = set(),set()
+    procs_defined,procs_called = set(),set()
     procs_defined = anlz_procs_defined_fun(node,procs_defined)
-    #proc_called = anlz_procs_called_fun(node,proc_called)
+    procs_called = anlz_procs_called_fun(node,procs_called)
     
     
     #anlz_procs_fun(node)

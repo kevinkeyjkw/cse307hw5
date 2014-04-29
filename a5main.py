@@ -145,74 +145,40 @@ def anlz_procs_imp(node):
         proc_called.add(node.name)
     else: raise Exception("Not implemented.")
     
-def anlz_procs_defined_fun(node,procs_defined):
-	if isinstance(node,(Print,Assign,Call)):
-		return set()
+def anlz_procs_fun(node,procs_defined,procs_called):
+	if isinstance(node,(Print,Assign)):
+		return set(),set()
 	elif isinstance(node,Block):
-		return anlz_block_p_d_fun(node,procs_defined,0)
+		#return a_block_p_fun(node,procs_defined,procs_called,0)
 	elif isinstance(node,(If,While)):
-		return anlz_procs_defined_fun(node.stmt,procs_defined)
+		return anlz_procs_fun(node.stmt,procs_defined,procs_called)
 	elif isinstance(node,Def):
-		return anlz_DEF_procs_fun(node,procs_defined)
+		return a_def_p_fun(node,procs_defined,procs_called)
+	elif isinstance(node,Call):
+		return a_call_p_fun(node,procs_defined,procs_called)
 	else:
-		return set()
+		return set(),set()
 		
-def anlz_block_p_d_fun(node,procs_defined,x):
+def a_block_p_fun(node,procs_defined,procs_called,x):
 	if x == len(node.stmts):
-		return set()
+		return set(),set()
 	else:
-		return anlz_procs_defined_fun(node.stmts[x],procs_defined) | anlz_block_p_d_fun(node,procs_defined,x+1)
+		a,b=anlz_procs_fun(node.stmts[x],procs_defined,procs_called) 
+		c,d = a_block_p_fun(node,procs_defined,procs_called,x+1)
+		return a|c,b|d
+#		return anlz_procs_fun(node.stmts[x],procs_defined,procs_called) | a_block_p_fun(node,procs_defined,procs_called,x+1)
+#		return anlz_procs_fun(node.stmts[x],procs_defined,procs_called)[0] | a_block_p_fun(node,procs_defined,procs_called,x+1)[0],anlz_procs_fun(node.stmts[x],procs_defined,procs_called)[1] | a_block_p_fun(node,procs_defined,procs_called,x+1)[1]
 
-def anlz_DEF_procs_fun(node,procs_defined):
+def a_def_p_fun(node,procs_defined,procs_called):
 	if node.name in procs_defined: raise AnalError()
 	print('Definition of procedure',node.name)
-	return {node.name} | anlz_procs_defined_fun(node.body,procs_defined)
+	return set([node.name]) | anlz_procs_fun(node.body,procs_defined,procs_called)[0],procs_called
 
-def anlz_procs_called_fun(node,procs_called):
-	if isinstance(node,Block):
-		return anlz_block_c_f(node,procs_called,0)
-	elif isinstance(node,(If,While)):
-		return anlz_procs_called_fun(node.stmt,procs_called)
-	elif isinstance(node,Def):
-		return anlz_procs_called_fun(node.body,procs_called)
-	elif isinstance(node,Call):
-		return anlz_CALL_c_f(node,procs_called)
-	else: return set()
 
-def anlz_block_c_f(node,procs_called,x):
-	if x == len(node.stmts):
-		return set()
-	else:
-		return anlz_procs_called_fun(node.stmts[x],procs_called) | anlz_block_c_f(node,procs_called,x+1)
-def anlz_CALL_c_f(node,procs_called):
+def a_call_p_fun(node,procs_defined,procs_called):
 	print('Call of procedure', node.name)
-	return set([node.name])
-# def anlz_procs_fun(node): 
-# 	"""Analyze procedure definitions and calls."""
-# 	#g=lambda x,y:x+y
-# 	#pdb.set_trace()
-# 	if isinstance(node,(Print,Assign)):pass
-# 	elif isinstance(node,Block):
-# 		anlz_block_procs_fun(node,anlz_procs_fun(node.stmts[0]),1)
-# 	elif isinstance(node,(If,While)):
-# 		anlz_procs_fun(node.stmt)
-# 	elif isinstance(node,Def):
-# 		anlz_def_procs_fun(node)
-# 	elif isinstance(node,Call):
-# 		anlz_call_procs_fun(node)
-# 	else: print("Not implemented.")
-# 	#Move everything to functions, is this func programming
-# 	
-# def anlz_def_procs_fun(node,procs_defined):
-# 	if node.name in proc_defined: raise AnalError()
-# 	print('Definition of procedure',node.name)
-# 	proc_defined.add(node.name)
-# 	anlz_procs_fun(node.body)
-# 	return anlz_procs_fun(node.body)
-# def anlz_call_procs_fun(node):
-# 	print('Call of procedure',node.name)
-# 	proc_called.add(node.name)
-# 
+	return procs_defined,procs_called | set([node.name])
+
 # def anlz_procs_obj(node, local_var_env, is_global):
 # 	if isinstance(node,(Print,Assign)):pass
 # 	elif isinstance(node,Def):
@@ -263,35 +229,63 @@ def anlz_vars_imp(node, local_var_env, is_global):
     elif isinstance(node, Call):
         for a in node.args: anlz_vars_imp(a, local_var_env, is_global)
     else: raise Exception("Not implemented.")
-
-
-def anlz_vars_fun(node, local_var_env, is_global):
-	if(isinstance(node,Var)):
-		anlz_var_vars_fun(node)
-	elif isinstance(node,(Int,String)):pass
+	
+def anlz_vars_fun(node,global_var_env,local_var_env,is_global):
+	if isinstance(node,Var):
+		if node.name not in global_var_env | local_var_env:raise AnalError()
+		print('Use of variable ',node.name)
+		return set(),set()
+	elif isinstance(node,(Int,String)):
+		return set(),set()
 	elif isinstance(node,Array):
-		anlz_array_vars_fun(node)
-	elif isinstance(node,Index):
-		anlz_index_vars_fun(node)
-	elif isinstance(node,BinOpExp):
-		anlz_binOpExp_vars_fun(node)
-	elif isinstance(node,UniOpExp):
-		anlz_uniOpExp_vars_fun(node)
+		return a_array_v_f(node,global_var_env,local_var_env,is_global,0)
+	elif isinstance(node, Index):
+		a,b=anlz_vars_fun(node.indexable,global_var_env,local_var_env,is_global)
+		c,d=anlz_vars_fun(node.index,global_var_env,local_var_env,is_global)
+		return a|c,b|d
+	elif isinstance(node, BinOpExp):
+		a,b=anlz_vars_fun(node.left,global_var_env,local_var_env,is_global)
+		c,d=anlz_vars_fun(node.right,global_var_env,local_var_env,is_global)
+		return a|c,b|d
+	elif isinstance(node, UniOpExp):
+		return anlz_vars_fun(node.arg,global_var_env,local_var_env,is_global)
 	elif isinstance(node,Print):
-		anlz_print_vars_fun(node)
+		return anlz_vars_fun(node.exp,global_var_env,local_var_env,is_global)
 	elif isinstance(node,Assign):
-		anlz_assign_vars_fun(node)
+		a,b = anlz_vars_fun(node.left,global_var_env,local_var_env,is_global)
+		if isinstance(node.left,Var):
+			print('Definition of variable', node.left.name)
+			if not is_global and node.left.name in global_var_env:
+				print('Shadowing of global variable', node.left.name)
+			if is_global:
+				return a|node.left.name, b|d
+			else:
+				return a,b|node.left.name
+		elif isinstance(node.left,Index):
+			c,d = anlz_vars_fun(node.left,global_var_env,local_var_env,is_global)
+			if is_global:
+				return a|c|node.left.name, b|d
+			else:
+				return a|c,b|d|node.left.name
 	elif isinstance(node,Block):
-		anlz_block_vars_fun(node)
-	elif isinstance(node,(If,While)):
-		anlz_if_while_vars_fun(node)
-	elif isinstance(node,Def):
-		anlz_def_vars_fun(node)
-	elif isinstance(node,Call):
-		anlz_call_vars_fun(node)
-	else:print("Not implemented.")	
-
-def anlz_vars_obj(node, local_var_env, is_global): pass
+		return a_block_v_f(node,global_var_env,local_var_env,is_global,0)
+		
+def a_block_v_f(node,global_var_env,local_var_env,is_global,x):
+	if x == len(node.stmts):
+		return set(),set()
+	else:
+		a,b = anlz_vars_fun(node.stmts[x],global_var_env,local_var_env,is_global)
+		c,d = a_block_v_f(node,global_var_env,local_var_env,is_global,x+1)
+		return a|c,b|d
+	
+def a_array_v_f(node,global_var_env,local_var_env,is_global,x):
+	if x == len(node.elements):
+		return set(),set()
+	else:
+		a,b = anlz_vars_fun(node.elements[x],global_var_env,local_var_env,is_global)
+		c,d= a_array_v_f(node,global_var_env,local_var_env,is_global,x+1)
+		return a|c,b|d
+		
 # Below is the driver code, which parses a given MustScript program
 # and analyzes the definitions and uses of procedures and variables
 
@@ -320,19 +314,15 @@ try:
     anlz_vars_imp(node, local_var_env, is_global)
 
     # set up and call method for analyzing procedures (functional)
-    
     pdb.set_trace()
     procs_defined,procs_called = set(),set()
-    procs_defined = anlz_procs_defined_fun(node,procs_defined)
-    procs_called = anlz_procs_called_fun(node,procs_called)
+    procs_defined = anlz_procs_fun(node,procs_defined,procs_called)
+    if {p for p in procs_called if p not in procs_defined}:
+    	raise AnalError('Call to undefined procedure')
     
-    
-    #anlz_procs_fun(node)
-    #if {p for p in proc_called if p not in proc_defined}:
-    #	print('call to undefined proc')
-    #global_var_env, local_var_env, is_global = set(),set(),True
-    #anlz_vars_fun(node,local_var_env,is_global)
-    
+    global_var_env, local_var_env, is_global = set(),set(),True
+    global_var_env,local_var_env = anlz_g_vars_fun(node,global_var_env,local_var_env,is_global)
+
     
     # set up and call method for analyzing variables (functional)
     # your methods could be named anlz_procs_fun and anlz_vars_fun 

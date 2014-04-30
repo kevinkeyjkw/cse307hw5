@@ -149,7 +149,7 @@ def anlz_procs_fun(node,procs_defined,procs_called):
 	if isinstance(node,(Print,Assign)):
 		return set(),set()
 	elif isinstance(node,Block):
-		#return a_block_p_fun(node,procs_defined,procs_called,0)
+		return a_block_p_fun(node,procs_defined,procs_called,0)
 	elif isinstance(node,(If,While)):
 		return anlz_procs_fun(node.stmt,procs_defined,procs_called)
 	elif isinstance(node,Def):
@@ -269,7 +269,33 @@ def anlz_vars_fun(node,global_var_env,local_var_env,is_global):
 				return a|c,b|d|node.left.name
 	elif isinstance(node,Block):
 		return a_block_v_f(node,global_var_env,local_var_env,is_global,0)
-		
+	elif isinstance(node,(If,While)):
+		a,b = anlz_vars_fun(node.exp,global_var_env,local_var_env,is_global)
+		c,d = anlz_vars_fun(node.stmt,global_var_env,local_var_env,is_global)
+		return a|c,b|d
+	elif isinstance(node,Def):
+		new_local_var_env = set(node.params)
+		print('Locals of procedure',node.name+':',', '.join(node.params))
+		a_def_v_p(new_local_var_env&global_var_env,0)
+		return anlz_vars_fun(node.body,global_var_env,new_local_var_env,False)
+	elif isinstance(node,Call):
+		return a_call_v_p(node,global_var_env,local_var_env,is_global,0)
+	else:raise Exception("Not implemented.")
+			
+def a_call_v_p(node,global_var_env,local_var_env,is_global,x):
+	if x == len(node.args):
+		return set(),set()
+	else:
+		a,b = anlz_vars_fun(node.args[x],global_var_env,local_var_env,is_global)
+		c,d = a_call_v_p(node,global_var_env,local_var_env,is_global,x+1)
+		return a|c,b|d
+	
+def a_def_v_p(a,x):
+	if x == len(a):
+		return
+	else:
+		print('Shadowing of global variable',a[x])
+		a_def_v_p(a,x+1)
 def a_block_v_f(node,global_var_env,local_var_env,is_global,x):
 	if x == len(node.stmts):
 		return set(),set()
@@ -314,14 +340,14 @@ try:
     anlz_vars_imp(node, local_var_env, is_global)
 
     # set up and call method for analyzing procedures (functional)
-    pdb.set_trace()
+    #pdb.set_trace()
     procs_defined,procs_called = set(),set()
-    procs_defined = anlz_procs_fun(node,procs_defined,procs_called)
+    procs_defined,procs_called = anlz_procs_fun(node,procs_defined,procs_called)
     if {p for p in procs_called if p not in procs_defined}:
     	raise AnalError('Call to undefined procedure')
     
     global_var_env, local_var_env, is_global = set(),set(),True
-    global_var_env,local_var_env = anlz_g_vars_fun(node,global_var_env,local_var_env,is_global)
+    global_var_env,local_var_env = anlz_vars_fun(node,global_var_env,local_var_env,is_global)
 
     
     # set up and call method for analyzing variables (functional)

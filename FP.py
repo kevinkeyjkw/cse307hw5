@@ -26,8 +26,12 @@ def anlz(a1,a2):
 	return (set([4,5,6]),set([1,2,3]))|({11},{12})
 def un(a1,a2):
 	return a1.union(a2)
+
+def print2(x):
+	print('Shadowing of variable',x)
+map(print2,a1)
 #(a1,a2)=anlz(a1,a2)
-for x in map(un,[a1,a2],[a3,a4]):
-	print(x)
+#for x in map(un,[a1,a2],[a3,a4]):
+#	print(x)
 #print(a1)
 #print(a2)

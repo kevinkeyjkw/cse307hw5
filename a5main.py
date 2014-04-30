@@ -23,61 +23,149 @@ class Node(object):
 class Var(Node):
     """Class of nodes representing accesses of variable."""
     fields = ['name']
-    
+    def anlz_procs(self):
+        pass
+    def anlz_procs_called(self):pass
+    def anlz_vars(self,local_var_env,is_global):
+        if self.name not in global_var_env | local_var_env:
+            print('Use of undeclared variable')
+        print('Use of variable ',self.name)
 class Int(Node):
     """Class of nodes representing integer literals."""
     fields = ['value']
-    
+    def anlz_procs(self):
+        pass
+    def anlz_procs_called(self):pass
+    def anlz_vars(self,local_var_env,is_global):pass
 class String(Node):
     """Class of nodes representing string literals."""
     fields = ['value']
-    
+    def anlz_procs(self):
+        pass
+    def anlz_procs_called(self):pass
+    def anlz_vars(self,local_var_env,is_global):pass
 class Array(Node):
     """Class of nodes representing array literals."""
     fields = ['elements']
-
+    def anlz_procs(self):
+        pass
+    def anlz_procs_called(self):pass
+    def anlz_vars(self,local_var_env,is_global):
+        for e in self.elements:
+            e.anlz_vars(local_var_env,is_global)
 class Index(Node):
     """Class of nodes representing indexed accesses of arrays or strings."""
     fields = ['indexable', 'index']
-
+    def anlz_procs(self):
+        pass
+    def anlz_procs_called(self):pass
+    def anlz_vars(self,local_var_env,is_global):
+        self.indexable.anlz_vars(local_var_env,is_global)
+        self.index.anlz_vars(local_var_env,is_global)
 class BinOpExp(Node):
     """Class of nodes representing binary-operation expressions."""
     fields = ['left', 'op', 'right']
-    
+    def anlz_procs(self):
+        pass
+    def anlz_procs_called(self):pass
+    def anlz_vars(self,local_var_env,is_global):
+        self.left.anlz_vars(local_var_env,is_global)
+        self.right.anlz_vars(local_var_env,is_global)
 class UniOpExp(Node):
     """Class of nodes representing unary-operation expressions."""
     fields = ['op', 'arg']
-
+    def anlz_procs(self):
+        pass
+    def anlz_procs_called(self):pass
+    def anlz_vars(self,local_var_env,is_global):
+        self.arg.anlz_vars(local_var_env,is_global)
 # subclasses of Node for statements
 
 class Print(Node):
     """Class of nodes representing print statements."""
     fields = ['exp']
-
+    def anlz_procs(self):
+        pass
+    def anlz_procs_called(self):pass
+    def anlz_vars(self,local_var_env,is_global):
+        self.exp.anlz_vars(local_var_env,is_global)
 class Assign(Node):
     """Class of nodes representing assignment statements."""
     fields = ['left', 'right']
-    
+    def anlz_procs(self):
+        pass    
+    def anlz_procs_called(self):pass
+    def anlz_vars(self,local_var_env,is_global):
+        self.right.anlz_vars(local_var_env,is_global)
+        if isinstance(self.left,Var):
+            if is_global: global_var_env.add(self.left.name)
+            else: local_var_env.add(self.left.name)
+            print('Definition of variable ',self.left.name)
+            if not is_global and self.left.name in global_var_env:
+                print('Shadowing of global variable', self.left.name)
+        if isinstance(self.left,Index):
+            self.left.anlz_vars(local_var_env,is_global)
+            
 class Block(Node):
     """Class of nodes representing block statements."""
     fields = ['stmts']
-
+    def anlz_procs(self):
+        for s in self.stmts:
+    	    s.anlz_procs()
+    def anlz_procs_called(self):
+        for s in self.stmts:
+            s.anlz_procs_called()
+    def anlz_vars(self,local_var_env,is_global):
+        for s in self.stmts:
+            s.anlz_vars(local_var_env,is_global)
 class If(Node):
     """Class of nodes representing if statements."""
     fields = ['exp', 'stmt']
-
+    def anlz_procs(self):
+        self.stmt.anlz_procs()
+    def anlz_procs_called(self):
+        self.stmt.anlz_procs_called()
+    def anlz_vars(self,local_var_env,is_global):
+        self.exp.anlz_vars(local_var_env,is_global)
+        self.stmt.anlz_vars(local_var_env,is_global)
 class While(Node):
     """Class of nodes representing while statements."""
     fields = ['exp', 'stmt']
-
+    def anlz_procs(self):
+    	self.stmt.anlz_procs()
+    def anlz_procs_called(self):
+        self.stmt.anlz_procs_called()
+    def anlz_vars(self,local_var_env,is_global):
+        self.exp.anlz_vars(local_var_env,is_global)
+        self.stmt.anlz_vars(local_var_env,is_global)
 class Def(Node):
     """Class of nodes representing procedure definitions."""
     fields = ['name', 'params', 'body']
-
+    def anlz_procs(self):
+        if self.name in procs_defined:
+        	print('method already defined!')
+        print('Definition of procedure',self.name)
+        procs_defined.add(self.name)
+        self.body.anlz_procs()
+    def anlz_procs_called(self):
+        self.body.anlz_procs_called()
+    def anlz_vars(self,local_var_env,is_global):
+        new_local_var_env = set(self.params)
+        print('Locals of procedure', self.name+':', ', '.join(self.params))
+        for v in new_local_var_env & global_var_env:
+            print('Shadowing of global variable',v)
+        self.body.anlz_vars(new_local_var_env,False)
 class Call(Node):
     """Class of nodes representing precedure calls."""
     fields = ['name', 'args']
-
+    def anlz_procs(self):
+        pass
+    def anlz_procs_called(self):
+        print('Call of procedure ',self.name)
+        procs_called.add(self.name)
+    def anlz_vars(self,local_var_env,is_global):
+        for a in self.args:
+            a.anlz_vars(local_var_env,is_global)
 class Parser(tpg.Parser):
     r"""
     token int:         '\d+' ;
@@ -314,7 +402,7 @@ def a_array_v_f(node,global_var_env,local_var_env,is_global,x):
 		return set(),set()
 	else:
 		a,b = anlz_vars_fun(node.elements[x],global_var_env,local_var_env,is_global)
-		c,d= a_array_v_f(node,global_var_env,local_var_env,is_global,x+1)
+		c,d= a_array_v_f(node,global_var_env|a,b|local_var_env,is_global,x+1)
 		return a|c,b|d
 		
 # Below is the driver code, which parses a given MustScript program
@@ -369,12 +457,13 @@ try:
 	
 	
     # set up and call method for analyzing procedures (object-oriented):
-    #proc_defined,proc_called = set(),set()
-    #anlz_procs_obj(node)
-    #if {p for p in proc_called if p not in proc_defined}:
-    #	except AnalError('call to undefined proc')
-    #global_var_env, local_var_env, is_global = set(),set(),True
-    #anlz_vars_obj(node,local_var_env,is_global)
+    procs_defined,procs_called = set(),set()
+    node.anlz_procs()
+    node.anlz_procs_called()
+    if {p for p in proc_called if p not in proc_defined}:
+        print('call to undefined proc')
+    global_var_env, local_var_env, is_global = set(),set(),True
+    node.anlz_vars(local_var_env,True)
     # set up and call method for analyzing variables (object-oriented):
     # your methods could be named anlz_procs_obj and anlz_vars_obj
 
